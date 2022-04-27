@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
+import cron from 'node-cron';
+import https from 'https';
 import {
   InteractionType,
   InteractionResponseType,
@@ -14,14 +16,107 @@ import {
   TEST_COMMAND,
   HasGuildCommands,
 } from './commands.js';
+import { resolve } from 'path';
 
 // Create an express app
-const app = express();
+const app = express(); 
 // Parse request body and verifies incoming requests using discord-interactions package
 app.use(express.json({ verify: VerifyDiscordRequest(process.env.PUBLIC_KEY) }));
 
 // Store for in-progress games. In production, you'd want to use a DB
 const activeGames = {};
+
+/**
+ * Schedules a cro
+ */
+/** 
+cron.schedule('0 7 * * *', async function() {
+
+  console.log("Testing crons job!");
+
+  const postData = JSON.stringify({
+    "query": "query questionOfToday {\n\tactiveDailyCodingChallengeQuestion {\n\t\tdate\n\t\tuserStatus\n\t\tlink\n\t\tquestion {\n\t\t\tacRate\n\t\t\tdifficulty\n\t\t\tfreqBar\n\t\t\tfrontendQuestionId: questionFrontendId\n\t\t\tisFavor\n\t\t\tpaidOnly: isPaidOnly\n\t\t\tstatus\n\t\t\ttitle\n\t\t\ttitleSlug\n\t\t\thasVideoSolution\n\t\t\thasSolution\n\t\t\ttopicTags {\n\t\t\t\tname\n\t\t\t\tid\n\t\t\t\tslug\n\t\t\t}\n\t\t}\n\t}\n}\n",
+    "operationName": "questionOfToday"
+  });
+
+  const options = {
+    hostname: 'leetcode.com',
+    path: '/graphql',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+
+
+  const req = https.request(options, (res) => {
+    console.log(`STATUS: ${res.statusCode}`);
+    console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
+
+    res.on('data', (chunk) => {
+      console.log(`BODY: ${chunk}`);
+    });
+    
+    res.on('end', () => {
+      console.log('No more data in response. Parsing message');
+    });
+  });
+
+  req.on('error', (e) => {
+    console.error(`problem with request: ${e.message}`);
+  });
+  
+  // Write data to request body
+  req.write(postData);
+  req.end();
+  
+});
+*/
+
+app.get('/get', async function (req, res){
+  const postData = JSON.stringify({
+    "query": "query questionOfToday {\n\tactiveDailyCodingChallengeQuestion {\n\t\tdate\n\t\tuserStatus\n\t\tlink\n\t\tquestion {\n\t\t\tacRate\n\t\t\tdifficulty\n\t\t\tfreqBar\n\t\t\tfrontendQuestionId: questionFrontendId\n\t\t\tisFavor\n\t\t\tpaidOnly: isPaidOnly\n\t\t\tstatus\n\t\t\ttitle\n\t\t\ttitleSlug\n\t\t\thasVideoSolution\n\t\t\thasSolution\n\t\t\ttopicTags {\n\t\t\t\tname\n\t\t\t\tid\n\t\t\t\tslug\n\t\t\t}\n\t\t}\n\t}\n}\n",
+    "operationName": "questionOfToday"
+  });
+
+  const options = {
+    hostname: 'leetcode.com',
+    path: '/graphql',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+
+  const leetcodeReq = https.request(options, (leetCodeRes) => {
+    let resBody = '';
+
+    console.log(`STATUS: ${leetCodeRes.statusCode}`);
+    console.log(`HEADERS: ${JSON.stringify(leetCodeRes.headers)}`);
+
+    leetCodeRes.on('data', (chunk) => {
+      console.log(`BODY: ${chunk}`);
+      resBody += chunk;
+    });
+    
+    leetCodeRes.on('end', () => {
+      console.log('No more data in response.');
+      resBody = JSON.parse(resBody)
+      leetCodeContent = {
+        // todo: add logic here to parse response -> send it to discord
+      }
+      res.end(resBody.data.activeDailyCodingChallengeQuestion.link);
+    });
+  });
+  
+  leetcodeReq.on('error', (e) => {
+    console.error(`problem with request: ${e.message}`);
+  });
+
+  // Write data to request body
+  leetcodeReq.write(postData);
+  leetcodeReq.end();
+});
 
 /**
  * Interactions endpoint URL where Discord will send HTTP requests
@@ -42,8 +137,6 @@ app.post('/interactions', async function (req, res) {
    * See https://discord.com/developers/docs/interactions/application-commands#slash-commands
    */
   if (type === InteractionType.APPLICATION_COMMAND) {
-    const { name } = data;
-
     // "test" guild command
     if (name === 'test') {
       // Send a message into the channel where command was triggered from
