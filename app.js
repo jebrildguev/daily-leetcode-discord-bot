@@ -16,13 +16,12 @@ import {
   TEST_COMMAND,
   HasGuildCommands,
 } from './commands.js';
-import { resolve } from 'path';
 
 // Create an express app
 const app = express(); 
 // Parse request body and verifies incoming requests using discord-interactions package
 app.use(express.json({ verify: VerifyDiscordRequest(process.env.PUBLIC_KEY) }));
-
+  
 // Store for in-progress games. In production, you'd want to use a DB
 const activeGames = {};
 
@@ -102,13 +101,18 @@ app.get('/get', async function (req, res){
     leetCodeRes.on('end', () => {
       console.log('No more data in response.');
       resBody = JSON.parse(resBody)
-      leetCodeContent = {
-        // todo: add logic here to parse response -> send it to discord
-      }
-      res.end(resBody.data.activeDailyCodingChallengeQuestion.link);
+      let baseHierarchy = resBody.data.activeDailyCodingChallengeQuestion;
+      const leetCodeQuestion = {
+        url: "leetcode.com" + baseHierarchy.link,
+        title: baseHierarchy.question.title,
+        date: baseHierarchy.date,
+        difficulty: baseHierarchy.question.difficulty,
+        topicTags: baseHierarchy.question.topicTags
+      };
+      console.log(JSON.stringify(leetCodeQuestion));
+      res.end(JSON.stringify(leetCodeQuestion));
     });
   });
-  
   leetcodeReq.on('error', (e) => {
     console.error(`problem with request: ${e.message}`);
   });
