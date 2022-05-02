@@ -67,7 +67,7 @@ app.get('/dailyLeetCode', async function (req, res) {
   };
   const leetcodeResponse = await getDailyLeetCode(config.leetcode.baseUrl + '/graphql', leetCodeOptions);
 
-  console.debug(leetcodeResponse);
+  console.log(leetcodeResponse);
 
   let topicTags = [];
   leetcodeResponse.data.activeDailyCodingChallengeQuestion.question.topicTags.forEach(element => {

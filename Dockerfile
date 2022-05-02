@@ -13,5 +13,8 @@ RUN npm install
 ## Copy source code into the image
 COPY . .
 
+## Expose port 3000 for container to listen to 
+EXPOSE 3000
+
 ## Launch the built image
 CMD ["node", "app.js"]
