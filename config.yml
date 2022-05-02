@@ -1,0 +1,6 @@
+leetcode:
+  baseUrl: https://leetcode.com
+    
+discord:
+  webhooks:
+    url: 'https://discord.com/api/webhooks/'
