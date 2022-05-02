@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import fetch from 'node-fetch';
 import { verifyKey } from 'discord-interactions';
-
 export function VerifyDiscordRequest(clientKey) {
   return function (req, res, buf, encoding) {
     const signature = req.get('X-Signature-Ed25519');
@@ -46,4 +45,24 @@ export function getRandomEmoji() {
 
 export function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// Fetch daily leetcode question 
+export async function getDailyLeetCode(url, options) {
+  return fetch(url, options)
+    .then(res => {
+      return res.json();
+    })
+    .catch(err => console.log(err));
+}
+
+// Send message to server
+export async function sendToDiscord(url, options) {
+  console.log(url);
+  console.log(options);
+  return fetch(url, options)
+    .then(res => {
+      return res;
+    })
+    .catch(err => console.log(err));
 }

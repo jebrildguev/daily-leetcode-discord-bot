@@ -9,122 +9,102 @@ import {
   MessageComponentTypes,
   ButtonStyleTypes,
 } from 'discord-interactions';
-import { VerifyDiscordRequest, getRandomEmoji, DiscordRequest } from './utils.js';
+import { VerifyDiscordRequest, getRandomEmoji, DiscordRequest, getDailyLeetCode, sendToDiscord } from './utils.js';
 import { getShuffledOptions, getResult } from './game.js';
 import {
   CHALLENGE_COMMAND,
   TEST_COMMAND,
   HasGuildCommands,
 } from './commands.js';
+import { CommandExecutor } from './commandExecutor.js';
+import yaml from 'js-yaml';
+import fs from 'fs';
+import { MessageEmbed } from 'discord.js';
+
 
 // Create an express app
 const app = express(); 
 // Parse request body and verifies incoming requests using discord-interactions package
 app.use(express.json({ verify: VerifyDiscordRequest(process.env.PUBLIC_KEY) }));
-  
+
+// Load config values from yml
+const config = yaml.load(fs.readFileSync('config.yml', 'utf8'));
+ 
 // Store for in-progress games. In production, you'd want to use a DB
 const activeGames = {};
 
 /**
- * Schedules a cro
+ * Schedules a crons jobb
  */
 /** 
-cron.schedule('0 7 * * *', async function() {
-
-  console.log("Testing crons job!");
-
-  const postData = JSON.stringify({
-    "query": "query questionOfToday {\n\tactiveDailyCodingChallengeQuestion {\n\t\tdate\n\t\tuserStatus\n\t\tlink\n\t\tquestion {\n\t\t\tacRate\n\t\t\tdifficulty\n\t\t\tfreqBar\n\t\t\tfrontendQuestionId: questionFrontendId\n\t\t\tisFavor\n\t\t\tpaidOnly: isPaidOnly\n\t\t\tstatus\n\t\t\ttitle\n\t\t\ttitleSlug\n\t\t\thasVideoSolution\n\t\t\thasSolution\n\t\t\ttopicTags {\n\t\t\t\tname\n\t\t\t\tid\n\t\t\t\tslug\n\t\t\t}\n\t\t}\n\t}\n}\n",
-    "operationName": "questionOfToday"
-  });
-
-  const options = {
-    hostname: 'leetcode.com',
-    path: '/graphql',
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  };
-
-
-  const req = https.request(options, (res) => {
-    console.log(`STATUS: ${res.statusCode}`);
-    console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
-
-    res.on('data', (chunk) => {
-      console.log(`BODY: ${chunk}`);
-    });
-    
-    res.on('end', () => {
-      console.log('No more data in response. Parsing message');
-    });
-  });
-
-  req.on('error', (e) => {
-    console.error(`problem with request: ${e.message}`);
-  });
-  
-  // Write data to request body
-  req.write(postData);
-  req.end();
-  
-});
+cron.schedule('0 7 * * *', async function() 
 */
 
-app.get('/get', async function (req, res){
-  const postData = JSON.stringify({
-    "query": "query questionOfToday {\n\tactiveDailyCodingChallengeQuestion {\n\t\tdate\n\t\tuserStatus\n\t\tlink\n\t\tquestion {\n\t\t\tacRate\n\t\t\tdifficulty\n\t\t\tfreqBar\n\t\t\tfrontendQuestionId: questionFrontendId\n\t\t\tisFavor\n\t\t\tpaidOnly: isPaidOnly\n\t\t\tstatus\n\t\t\ttitle\n\t\t\ttitleSlug\n\t\t\thasVideoSolution\n\t\t\thasSolution\n\t\t\ttopicTags {\n\t\t\t\tname\n\t\t\t\tid\n\t\t\t\tslug\n\t\t\t}\n\t\t}\n\t}\n}\n",
-    "operationName": "questionOfToday"
-  });
-
-  const options = {
-    hostname: 'leetcode.com',
-    path: '/graphql',
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
+app.get('/dailyLeetCode', async function (req, res) {
+  const DAILY_CODING_CHALLENGE_QUERY = `
+  query questionOfToday {
+    activeDailyCodingChallengeQuestion {
+      date
+      link
+      question {
+        acRate
+        difficulty
+        frontendQuestionId: questionFrontendId
+        title
+        topicTags {
+          name
+          id
+          slug
+        }
+      }
     }
+  }`;
+
+  const leetCodeOptions = {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query: DAILY_CODING_CHALLENGE_QUERY }),
+  };
+  const leetcodeResponse = await getDailyLeetCode(config.leetcode.baseUrl + '/graphql', leetCodeOptions);
+
+  console.debug(leetcodeResponse);
+
+  let topicTags = [];
+  leetcodeResponse.data.activeDailyCodingChallengeQuestion.question.topicTags.forEach(element => {
+    topicTags.push(element.name);
+  });
+  
+  const leetcodeEmbed = new MessageEmbed()
+    .setColor('#0099ff')
+    .setTitle('Daily Leetcode Challenge: ' + leetcodeResponse.data.activeDailyCodingChallengeQuestion.question.frontendQuestionId + ' - ' + leetcodeResponse.data.activeDailyCodingChallengeQuestion.question.title)
+    .setURL(config.leetcode.baseUrl + leetcodeResponse.data.activeDailyCodingChallengeQuestion.link)
+    .addFields( 
+      { name: 'Difficulty', value: leetcodeResponse.data.activeDailyCodingChallengeQuestion.question.difficulty, inline: true },
+      { name: 'Topic tags', value: topicTags.join(", "), inline: true },
+    );
+  
+  const discordOptions = {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json'},
+    body: JSON.stringify({ 
+      username: 'daily-leetcode-publisher',
+      embeds: [ leetcodeEmbed ]
+    })
   };
 
-  const leetcodeReq = https.request(options, (leetCodeRes) => {
-    let resBody = '';
-
-    console.log(`STATUS: ${leetCodeRes.statusCode}`);
-    console.log(`HEADERS: ${JSON.stringify(leetCodeRes.headers)}`);
-
-    leetCodeRes.on('data', (chunk) => {
-      console.log(`BODY: ${chunk}`);
-      resBody += chunk;
-    });
-    
-    leetCodeRes.on('end', () => {
-      console.log('No more data in response.');
-      resBody = JSON.parse(resBody)
-      let baseHierarchy = resBody.data.activeDailyCodingChallengeQuestion;
-      const leetCodeQuestion = {
-        url: "leetcode.com" + baseHierarchy.link,
-        title: baseHierarchy.question.title,
-        date: baseHierarchy.date,
-        difficulty: baseHierarchy.question.difficulty,
-        topicTags: baseHierarchy.question.topicTags
-      };
-      console.log(JSON.stringify(leetCodeQuestion));
-      res.end(JSON.stringify(leetCodeQuestion));
-    });
-  });
-  leetcodeReq.on('error', (e) => {
-    console.error(`problem with request: ${e.message}`);
-  });
-
-  // Write data to request body
-  leetcodeReq.write(postData);
-  leetcodeReq.end();
+  const discordResponse = await sendToDiscord(config.discord.webhooks.url + process.env.WEB_HOOK_ID_DEV + '/' + process.env.WEB_HOOK_TOKEN_DEV, discordOptions);
+  if (discordResponse.ok) {
+    res.sendStatus(200);
+  } else { // TODO: what exceptions could be thrown? 
+    res.sendStatus(500);
+  }
+   
 });
 
 /**
  * Interactions endpoint URL where Discord will send HTTP requests
  */
+// TODO: Migrate all these commands into command executor - will use command design pattern.
 app.post('/interactions', async function (req, res) {
   // Interaction type and data
   const { type, id, data } = req.body;
