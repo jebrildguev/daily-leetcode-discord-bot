@@ -2,6 +2,8 @@ name: learn-github-actions
 on: 
   push:
     branches: [ main ]
+    tags:
+      - "v*.*.*"
 jobs:
   check-bats-version:
     runs-on: ubuntu-latest
