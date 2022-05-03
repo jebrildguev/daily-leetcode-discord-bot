@@ -101,8 +101,16 @@ cron.schedule('0 7 * * *', async function() {
     webHookId = process.env.WEB_HOOK_ID_DEV;
     webHookToken = process.env.WEB_HOOK_TOKEN_DEV;
   }
-  const discordResponse = await sendToDiscord(config.discord.webhooks.url + webHookId + '/' + webHookToken, discordOptions);
+  await sendToDiscord(config.discord.webhooks.url + webHookId + '/' + webHookToken, discordOptions);
   console.log("Successfully sent to discord!");
+});
+
+/**
+ * Health check endpoint to see if application is UP.
+ */
+app.get('/health', function (req, res) {
+  console.log("Health check.");
+  res.sendStatus(200);
 });
 
 /**
