@@ -5,9 +5,10 @@
   "main": "app.js",
   "type": "module",
   "scripts": {
-    "start": "node app.js"
+    "start": "NODE_ENV=production node app.js",
+    "start-dev": "NODE_ENV=develop node app.js"
   },
-  "author": "Shay DeWael",
+  "author": "Jebril G",
   "license": "MIT",
   "dependencies": {
     "discord-interactions": "^3.2.0",

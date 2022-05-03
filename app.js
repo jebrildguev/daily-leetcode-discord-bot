@@ -33,14 +33,14 @@ const config = yaml.load(fs.readFileSync('config.yml', 'utf8'));
 // Store for in-progress games. In production, you'd want to use a DB
 const activeGames = {};
 
-/**
- * Schedules a crons jobb
- */
-/** 
-cron.schedule('0 7 * * *', async function() 
-*/
+// Log out the current env
+console.log('NODE_ENV: ' + process.env.NODE_ENV);
 
-app.get('/dailyLeetCode', async function (req, res) {
+/**
+ * Schedules a crons job to be run at 7:00 EST
+ */
+cron.schedule('0 7 * * *', async function() {
+  console.log("Running crons job!");
   const DAILY_CODING_CHALLENGE_QUERY = `
   query questionOfToday {
     activeDailyCodingChallengeQuestion {
@@ -92,13 +92,17 @@ app.get('/dailyLeetCode', async function (req, res) {
     })
   };
 
-  const discordResponse = await sendToDiscord(config.discord.webhooks.url + process.env.WEB_HOOK_ID_DEV + '/' + process.env.WEB_HOOK_TOKEN_DEV, discordOptions);
-  if (discordResponse.ok) {
-    res.sendStatus(200);
-  } else { // TODO: what exceptions could be thrown? 
-    res.sendStatus(500);
+  let webHookId = '';
+  let webHookToken = '';
+  if (process.env.NODE_ENV === 'production') {
+    webHookId = process.env.WEB_HOOK_ID_PROD;
+    webHookToken = process.env.WEB_HOOK_TOKEN_PROD;
+  } else {
+    webHookId = process.env.WEB_HOOK_ID_DEV;
+    webHookToken = process.env.WEB_HOOK_TOKEN_DEV;
   }
-   
+  const discordResponse = await sendToDiscord(config.discord.webhooks.url + webHookId + '/' + webHookToken, discordOptions);
+  console.log("Successfully sent to discord!");
 });
 
 /**
